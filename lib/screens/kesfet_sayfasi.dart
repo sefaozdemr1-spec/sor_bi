@@ -16,7 +16,6 @@ class KesfetSayfasi extends StatefulWidget {
 class _KesfetSayfasiState extends State<KesfetSayfasi> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _aramaController = TextEditingController();
-  final AramaServisi _aramaServisi = AramaServisi();
   String _aramaKelimesi = "";
 
   @override
@@ -73,7 +72,7 @@ class _KesfetSayfasiState extends State<KesfetSayfasi> with SingleTickerProvider
        return _buildVitrinListe(isKullanici);
     }
     
-    // Orijinal StreamBuilder yapısı (Eğer vitrin kapalıysa çalışır)
+    // Orijinal StreamBuilder yapısı (Firebase hatası vermemesi için vitrin açıkken buraya asla girmez)
     return const Center(child: CircularProgressIndicator());
   }
 

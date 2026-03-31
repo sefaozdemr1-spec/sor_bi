@@ -1,27 +1,28 @@
+import '../services/dino_servisi.dart'; // 🦖 Dino AI buraya, en tepeye!
+import '../services/telegram_servisi.dart'; // 🛰️ TELEGRAM KOMUTA MERKEZİ!
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/soru_model.dart';
-import '../services/firestore_servisi.dart';
-import '../services/auth_servisi.dart';
-import '../services/moderasyon_servisi.dart';
+import '../core/providers/auth_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SoruSorModal extends StatefulWidget {
+class SoruSorModal extends ConsumerStatefulWidget {
   const SoruSorModal({super.key});
 
   @override
-  State<SoruSorModal> createState() => _SoruSorModalState();
+  ConsumerState<SoruSorModal> createState() => _SoruSorModalState();
 }
 
-class _SoruSorModalState extends State<SoruSorModal> {
+class _SoruSorModalState extends ConsumerState<SoruSorModal> {
   final _baslikController = TextEditingController();
   final _detayController = TextEditingController();
   bool _gizliUyeOlsun = false;
   String _seciliKategori = "Genel";
+  bool _isPosting = false;
 
-  // Mevcut Kategoriler (Ana Akışla Birebir Uyumlu!)
   final List<Map<String, dynamic>> _kategoriler = [
-    {"baslik": "Genel", "ikon": Icons.widgets_rounded, "renk": Colors.black87},
+    {"baslik": "Genel", "ikon": Icons.widgets_rounded, "renk": Colors.grey},
     {"baslik": "Gündem", "ikon": Icons.local_fire_department_rounded, "renk": Colors.redAccent},
     {"baslik": "Mutfak", "ikon": Icons.restaurant_rounded, "renk": Colors.orangeAccent},
     {"baslik": "Kombin", "ikon": Icons.checkroom_rounded, "renk": Colors.pinkAccent},
@@ -36,6 +37,8 @@ class _SoruSorModalState extends State<SoruSorModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: EdgeInsets.only(
         top: 24,
@@ -43,9 +46,9 @@ class _SoruSorModalState extends State<SoruSorModal> {
         right: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A1D) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -54,19 +57,26 @@ class _SoruSorModalState extends State<SoruSorModal> {
           Center(
             child: Container(
               width: 50, height: 5,
-              decoration: BoxDecoration(color: Colors.grey.shade700, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            "Aklındaki Soruyu Ateşle 🔥",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Aklındaki Soruyu Ateşle 🔥",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
+              ),
+              IconButton(
+                icon: Icon(Icons.close_rounded, color: isDark ? Colors.white60 : Colors.black45),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
 
-          // KATEGORİ SEÇİCİ (Yatay Kaydıran Chip Menüsü)
-          const Text("Kategori Seç", style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
+          // KATEGORİ SEÇİCİ
           SizedBox(
             height: 42,
             child: ListView.builder(
@@ -102,120 +112,142 @@ class _SoruSorModalState extends State<SoruSorModal> {
           ),
           const SizedBox(height: 20),
 
-          // Soru Başlığı
           TextField(
             controller: _baslikController,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
             decoration: InputDecoration(
-              hintText: "Örn: En kârlı yazılım dili hangisidir?",
+              hintText: "Soru başlığı ne olsun?",
               hintStyle: TextStyle(color: Colors.grey.shade500),
               filled: true,
-              fillColor: const Color(0xFF2C2C2C),
+              fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Detay
           TextField(
             controller: _detayController,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
             maxLines: 4,
             decoration: InputDecoration(
-              hintText: "Sorunu, dertlerini veya olayları buraya dök kanka...",
+              hintText: "Biraz detay ver kanka...",
               hintStyle: TextStyle(color: Colors.grey.shade500),
               filled: true,
-              fillColor: const Color(0xFF2C2C2C),
+              fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
-          // Gizli Üye Şalteri
           SwitchListTile(
-            title: const Text("Gizli Üye Olarak Sor 🕵️‍♂️", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: Text("Profilin ve gerçek adın asla gözükmez.", style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+            title: Text("Gizli Üye olarak sor 🕵️‍♂️", style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 14)),
             value: _gizliUyeOlsun,
-            activeColor: Colors.deepPurpleAccent,
-            onChanged: (value) => setState(() => _gizliUyeOlsun = value),
+            activeColor: Colors.pinkAccent,
+            onChanged: (val) => setState(() => _gizliUyeOlsun = val),
           ),
+
           const SizedBox(height: 20),
 
-          // Paylaş Butonu
           ElevatedButton(
-            onPressed: () async {
-              if (_baslikController.text.isEmpty || _detayController.text.isEmpty) return;
-
-              // MİLYARLIK MODERASYON FİLTRESİ (UGC)
-              if (ModerasyonServisi.kufurVarMi(_baslikController.text) ||
-                  ModerasyonServisi.kufurVarMi(_detayController.text)) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("⚠️ Uyarı: Sorunuz uygunsuz kelimeler içeriyor. Lütfen asil bir dil kullanın."),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
-                }
-                return;
-              }
-
-              final orijinalUyemiz = await AuthServisi().getCurrentUserProfil();
-              if (orijinalUyemiz == null) return;
-
-              final firebaseUid = FirebaseAuth.instance.currentUser?.uid ?? "";
-              final anaIsim = orijinalUyemiz['kullaniciAdi'] ?? "Anonim Kullanıcı";
-              final asilAvatar = orijinalUyemiz['kullaniciFoto'] ?? "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-              final sahipLakap = orijinalUyemiz['lakap'] ?? "";
-
-              final sistemKullanicisi = _gizliUyeOlsun ? "Gizli Kullanıcı" : anaIsim;
-              final sistemLakabi = _gizliUyeOlsun ? "" : sahipLakap;
-
-              final yeniBulutSoru = SoruModel(
-                id: "",
-                kullaniciId: _gizliUyeOlsun ? "" : firebaseUid,
-                baslik: _baslikController.text,
-                icerik: _detayController.text,
-                kategori: _seciliKategori, 
-                tarih: "Şimdi",
-                begeniSayisi: 0,
-                yorumSayisi: 0,
-                kullaniciAdi: sistemKullanicisi,
-                kullaniciFoto: asilAvatar,
-                lakap: sistemLakabi,
-                isAnonim: _gizliUyeOlsun,
-              );
-
-              await FirestoreServisi().soruEkle(yeniBulutSoru);
-              
-              // Task 5: Puan Kazandır (+10 Puan)
-              if (!_gizliUyeOlsun && firebaseUid.isNotEmpty) {
-                await FirebaseFirestore.instance.collection('kullanicilar').doc(firebaseUid).update({
-                  'puan': FieldValue.increment(10)
-                });
-              }
-
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(_gizliUyeOlsun
-                        ? "Gönderiniz anonim olarak başarıyla paylaşıldı."
-                        : "$anaIsim, gönderiniz başarıyla paylaşıldı."),
-                    backgroundColor: Colors.deepPurpleAccent,
-                  ),
-                );
-              }
-            },
+            onPressed: _isPosting ? null : _soruGonder,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.pinkAccent,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 5,
             ),
-            child: const Text("Paylaş", style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            child: _isPosting 
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : const Text("Soruyu Ateşle 🔥", style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
+  }
+
+  void _soruGonder() async {
+    if (_baslikController.text.trim().isEmpty) return;
+
+    setState(() => _isPosting = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Kullanıcı profilini çekelim (İsim Garantili!)
+      final userDoc = await FirebaseFirestore.instance.collection('kullanicilar').doc(user.uid).get();
+      final userData = userDoc.data() ?? {};
+      
+      // 🛡️ İsim ve Fotoğraf için 3 katmanlı güvenlik (Firestore -> Auth -> Varsayılan)
+      final String ad = _gizliUyeOlsun 
+          ? "Gizli Kullanıcı" 
+          : (userData['kullaniciAdi'] ?? user.displayName ?? "SorBiliyo Üyesi");
+      
+      final String foto = _gizliUyeOlsun 
+          ? "" 
+          : (userData['kullaniciFoto'] ?? user.photoURL ?? "");
+
+      final yeniSoru = {
+        'kullaniciId': user.uid,
+        'kullaniciAdi': ad,
+        'kullaniciFoto': foto,
+        'baslik': _baslikController.text.trim(),
+        'icerik': _detayController.text.trim(),
+        'kategori': _seciliKategori,
+        'zaman': FieldValue.serverTimestamp(),
+        'begeniSayisi': 0,
+        'yorumSayisi': 0,
+        'isAnonim': _gizliUyeOlsun,
+        'trendSkoru': 0,
+        'durum': 'aktif',
+      };
+
+      // 🦖 SORUYU EKLE VE ID'YI AL
+      final docRef = await FirebaseFirestore.instance.collection('sorular').add(yeniSoru).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw 'Firestore Zaman Aşımı! Lütfen veritabanı kapalı mı kontrol edin.',
+      );
+
+      // Dino AI Cevap Versin (Arka planda çalışsın!)
+      DinoServisi().ilkCevabiPatlat(docRef.id, _baslikController.text.trim());
+
+      // 🛡️ TELEGRAM KOMUTA MERKEZİNE BİLDİR! (Sefa Abi Elite Rapor)
+      try {
+        await TelegramServisi.yeniSoruBildir(
+          baslik: _baslikController.text.trim(),
+          yazar: ad,
+          kategori: _seciliKategori,
+        );
+      } catch (e) {
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text("🚀 Telegram Raporu Fırlatılamadı: $e"), backgroundColor: Colors.orangeAccent),
+           );
+        }
+      }
+
+      // ✅ PUAN KAZANDIR (Sessiz ve Güvenli Mod)
+      try {
+        await FirebaseFirestore.instance.collection('kullanicilar').doc(user.uid).set({
+          'puan': FieldValue.increment(_gizliUyeOlsun ? 5 : 15),
+          'toplamSoru': FieldValue.increment(1),
+        }, SetOptions(merge: true)).timeout(const Duration(seconds: 4)); 
+      } catch (_) {
+        // Puan başarısız olsa da kullanıcıya hata gösterme
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("🚀 Sorun ateşlendi! Dino AI uyandı! 🦖"), backgroundColor: Colors.pinkAccent),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String msg = e.toString();
+        if (msg.contains("permission-denied")) msg = "🔒 Üzgünüz, Firestore yazma iznin yok. (Rules'ı kontrol et!)";
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Hata: $msg"), backgroundColor: Colors.redAccent));
+      }
+    }
+    setState(() => _isPosting = false);
   }
 }

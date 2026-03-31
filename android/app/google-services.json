@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "513829091101",
+    "project_id": "sorbi-56227",
+    "storage_bucket": "sorbi-56227.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:513829091101:android:c31722e4c153a6723993f4",
+        "android_client_info": {
+          "package_name": "com.sefa.sor_bi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTt7cp7PF2WNwP52VezuP8asI2QHhaqnA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

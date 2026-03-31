@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/auth_servisi.dart';
+import '../core/providers/auth_provider.dart';
 import 'eula_sayfasi.dart'; // Milyarlık Hukuk Sözleşmesi
-
-class KayitSayfasi extends StatefulWidget {
+import '../main.dart'; // 🎨 Tema takibi için gerekli import!
+class KayitSayfasi extends ConsumerStatefulWidget {
   const KayitSayfasi({super.key});
 
   @override
-  State<KayitSayfasi> createState() => _KayitSayfasiState();
+  ConsumerState<KayitSayfasi> createState() => _KayitSayfasiState();
 }
 
-class _KayitSayfasiState extends State<KayitSayfasi> {
+class _KayitSayfasiState extends ConsumerState<KayitSayfasi> {
   final _isimSecici = TextEditingController();
   final _emailSecici = TextEditingController();
   final _sifreSecici = TextEditingController();
-  final _sifreTekrarSecici = TextEditingController(); // 🆕 Şifre Tekrar
-  final AuthServisi _authServisi = AuthServisi();
+  final _sifreTekrarSecici = TextEditingController(); 
   bool _isLoading = false;
-  bool _sifreGoster = false; // 🆕 Görünürlük
-  bool _sifreTekrarGoster = false; // 🆕 Görünürlük
+  bool _sifreGoster = false; 
+  bool _sifreTekrarGoster = false; 
   bool _eulaKabulEdildi = false;
   bool _acikRizaKabulEdildi = false;
   bool _pazarlamaKabulEdildi = false;
 
-  void _sekreterKayit(BuildContext context) async {
+  void _sekreterKayit() async {
     // 1. KURAL: EULA Kabul Edilmediyse Kapıdan Sokma!
     if (!_eulaKabulEdildi) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Lütfen Kullanıcı Sözleşmesi'ni (EULA) kabul ediniz."), backgroundColor: Colors.orange),
+        const SnackBar(content: Text("⚠️ Lütfen Üyelik Sözleşmesi'ni (EULA) kabul ediniz."), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -62,24 +62,22 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await _authServisi.epostaIleKayit(_isimSecici.text.trim(), _emailSecici.text.trim(), _sifreSecici.text.trim());
+      // 🚀 Yeni AuthServisi ile Kayıt İşlemi
+      await ref.read(authServisiProvider).kayitOl(
+        email: _emailSecici.text.trim(),
+        sifre: _sifreSecici.text.trim(),
+        kullaniciAdi: _isimSecici.text.trim(),
+      );
       
       if (mounted) {
         setState(() => _isLoading = false);
-        if (user == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Kayıt işlemi başarısız oldu. Bilgilerinizi kontrol ediniz."), backgroundColor: Colors.redAccent),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Kayıt Başarılı! ✅ Lütfen e-postanıza giderek hesabınızı doğrulayın."),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 4),
-            ),
-          );
-          Navigator.pop(context); 
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Kayıt Başarılı! ✅ SorBi dünyasına hoş geldin!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // Giriş sayfasına veya Ana sayfaya döner
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -91,6 +89,13 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Hata: $mesaj"), backgroundColor: Colors.redAccent),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Beklenmedik bir hata oluştu: $e"), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -107,190 +112,178 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.deepPurpleAccent),
-      ),
-      extendBodyBehindAppBar: true, // Appbar şeffaf olsun, arkadan asil tasarım aksın diye
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Cıvıl Cıvıl Lüks Çatı!
-            Container(
-              width: double.infinity,
-              height: 250,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.pinkAccent.shade400, Colors.deepPurpleAccent.shade400],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
-                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(80)), // Tek taraflı janjanlı kavis
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, currentMode, _) {
+        final isDark = currentMode == ThemeMode.dark;
+
+        return Scaffold(
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark 
+                  ? [const Color(0xFF0F0F12), const Color(0xFF2C0B4F)] 
+                  : [const Color(0xFFF7F8FA), Colors.white],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              child: const SafeArea(
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.person_add_alt_1_rounded, size: 70, color: Colors.white),
-                    SizedBox(height: 10),
-                    Text("Hesap Oluştur", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 80),
+                    // 💎 LOGO VE BAŞLIK
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? Colors.white.withOpacity(0.05) : Colors.deepPurpleAccent.withOpacity(0.05),
+                        border: Border.all(color: Colors.pinkAccent.withOpacity(0.3), width: 2),
+                      ),
+                      child: const Icon(Icons.person_add_alt_1_rounded, size: 60, color: Colors.pinkAccent),
+                    ),
+                    const SizedBox(height: 20),
+                    Text("SorBi Üyesi Ol", style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1)),
+                    const Text("Sorularını Keşfetmeye Hazır mısın? ✨", style: TextStyle(color: Colors.grey, fontSize: 14)),
+                    
+                    const SizedBox(height: 40),
+
+                    // ✉️ INPUTLAR
+                    _buildInput(_isimSecici, Icons.badge_outlined, "Kullanıcı Adı", isDark),
+                    const SizedBox(height: 16),
+                    _buildInput(_emailSecici, Icons.email_outlined, "E-posta", isDark),
+                    const SizedBox(height: 16),
+                    _buildInput(_sifreSecici, Icons.lock_outline_rounded, "Şifre", isDark, isPass: true, passVar: _sifreGoster, onToggle: () => setState(() => _sifreGoster = !_sifreGoster)),
+                    const SizedBox(height: 16),
+                    _buildInput(_sifreTekrarSecici, Icons.verified_user_outlined, "Şifre Tekrar", isDark, isPass: true, passVar: _sifreTekrarGoster, onToggle: () => setState(() => _sifreTekrarGoster = !_sifreTekrarGoster)),
+
+                    const SizedBox(height: 24),
+                    
+                    // CHECKBOXLAR
+                    _checkboxSatiri(
+                      deger: _eulaKabulEdildi,
+                      renk: Colors.pinkAccent,
+                      isDark: isDark,
+                      onDegisti: (val) => setState(() => _eulaKabulEdildi = val ?? false),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const EulaSayfasi())),
+                      metin: "Üyelik Sözleşmesi ve Gizlilik Politikası'nı okudum.",
+                    ),
+                    const SizedBox(height: 8),
+                    _checkboxSatiri(
+                      deger: _acikRizaKabulEdildi,
+                      renk: Colors.cyan,
+                      isDark: isDark,
+                      onDegisti: (val) => setState(() => _acikRizaKabulEdildi = val ?? false),
+                      onTap: () => _acikRizaMetniGoster(context),
+                      metin: "KVKK Açık Rıza Metni'ni okudum ve kabul ediyorum.",
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // 🚀 KAYIT OL BUTONU
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _sekreterKayit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.pinkAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          elevation: 10,
+                          shadowColor: Colors.pinkAccent.withOpacity(0.5),
+                        ),
+                        child: _isLoading 
+                          ? const CircularProgressIndicator(color: Colors.white) 
+                          : const Text("Kayıt Ol ve Parlamaya Başla", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 30),
+                    
+                    // GERİ DÖNÜŞ
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Zaten bir hesabın var mı?", style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Giriş Yap", style: TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
-            
-            Padding(
-              padding: const EdgeInsets.all(24.0),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInput(TextEditingController ctrl, IconData icon, String hint, bool isDark, {bool isPass = false, bool? passVar, VoidCallback? onToggle}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
+      ),
+      child: TextField(
+        controller: ctrl,
+        obscureText: isPass ? !(passVar ?? false) : false,
+        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: isDark ? Colors.white.withOpacity(0.3) : Colors.black38),
+          prefixIcon: Icon(icon, color: Colors.pinkAccent),
+          suffixIcon: isPass ? IconButton(
+            icon: Icon(passVar == true ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.grey, size: 20),
+            onPressed: onToggle,
+          ) : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        ),
+      ),
+    );
+  }
+
+  Widget _checkboxSatiri({required bool deger, required Color renk, required bool isDark, required Function(bool?) onDegisti, required VoidCallback onTap, required String metin}) {
+    return GestureDetector(
+      onTap: () => onDegisti(!deger),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.03) : renk.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: deger,
+                onChanged: onDegisti,
+                activeColor: renk,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 30),
-                  // K.S Kürsü İsmi
-                  TextField(
-                    controller: _isimSecici,
-                    decoration: InputDecoration(
-                      labelText: "Kullanıcı Adı",
-                      prefixIcon: const Icon(Icons.badge_outlined, color: Colors.pinkAccent),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
+                  Text(metin, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black87)),
+                  GestureDetector(
+                    onTap: onTap,
+                    child: Text("Sözleşmeyi Oku", style: TextStyle(fontSize: 11, color: renk, decoration: TextDecoration.underline)),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Çaylak Maili
-                  TextField(
-                    controller: _emailSecici,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: "E-Posta Adresi",
-                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.pinkAccent),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Şifre Üretim Tesisi 1
-                  TextField(
-                    controller: _sifreSecici,
-                    obscureText: !_sifreGoster,
-                    decoration: InputDecoration(
-                      labelText: "Şifre (En az 8 karakter)",
-                      prefixIcon: const Icon(Icons.shield_outlined, color: Colors.pinkAccent),
-                      suffixIcon: IconButton(
-                        icon: Icon(_sifreGoster ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.grey),
-                        onPressed: () => setState(() => _sifreGoster = !_sifreGoster),
-                      ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 🆕 KİLİT NOKTASI: Şifre Tekrar
-                  TextField(
-                    controller: _sifreTekrarSecici,
-                    obscureText: !_sifreTekrarGoster,
-                    decoration: InputDecoration(
-                      labelText: "Şifre Tekrar",
-                      prefixIcon: const Icon(Icons.verified_user_outlined, color: Colors.pinkAccent),
-                      suffixIcon: IconButton(
-                        icon: Icon(_sifreTekrarGoster ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.grey),
-                        onPressed: () => setState(() => _sifreTekrarGoster = !_sifreTekrarGoster),
-                      ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // CHECKBOX 1: KULLANICI SÖZLEŞMESİ (ZORUNLU)
-                  _checkboxSatiri(
-                    deger: _eulaKabulEdildi,
-                    renk: Colors.deepPurpleAccent,
-                    onDegisti: (val) => setState(() => _eulaKabulEdildi = val ?? false),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const EulaSayfasi())),
-                    metin: "Üyelik Sözleşmesi ve Gizlilik Politikası'nı okudum, kabul ediyorum.",
-                    link: "Sözleşmeyi Oku",
-                    linkRenk: Colors.deepPurpleAccent,
-                    zorunlu: true,
-                  ),
-                  const SizedBox(height: 8),
-
-                  // CHECKBOX 2: KVKK AÇIK RIZA (ZORUNLU)
-                  _checkboxSatiri(
-                    deger: _acikRizaKabulEdildi,
-                    renk: Colors.teal,
-                    onDegisti: (val) => setState(() => _acikRizaKabulEdildi = val ?? false),
-                    onTap: () => _acikRizaMetniGoster(context),
-                    metin: "Kişisel verilerimin işlenmesine yönelik Açık Rıza Metni'ni okudum ve kabul ediyorum.",
-                    link: "Metni Oku",
-                    linkRenk: Colors.teal,
-                    zorunlu: true,
-                  ),
-                  const SizedBox(height: 8),
-
-                  // CHECKBOX 3: PAZARLAMA (OPSİYONEL)
-                  _checkboxSatiri(
-                    deger: _pazarlamaKabulEdildi,
-                    renk: Colors.orangeAccent,
-                    onDegisti: (val) => setState(() => _pazarlamaKabulEdildi = val ?? false),
-                    onTap: null,
-                    metin: "Kampanya ve bilgilendirme amaçlı ileti almayı kabul ediyorum.",
-                    link: "",
-                    linkRenk: Colors.orangeAccent,
-                    zorunlu: false,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Efsane Roket Butonu
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : () => _sekreterKayit(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pinkAccent.shade400,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        elevation: 5,
-                      ),
-                      child: _isLoading 
-                        ? const CircularProgressIndicator(color: Colors.white) 
-                        : const Text("Kayıt Ol", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 30),
-                  Row(children: [ Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)), const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text("VEYA ŞUNUNLA KAYIT OL", style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold))), Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)) ]),
-                  const SizedBox(height: 30),
-
-                  // 4'LÜ VİP SOSYAL KAYIT KAPILARI (Google, Apple, SMS)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildPoshLogoButton(Icons.g_mobiledata_rounded, Colors.redAccent, "Google"),
-                      const SizedBox(width: 15),
-                      _buildPoshLogoButton(Icons.apple_rounded, Colors.black87, "Apple"),
-                      const SizedBox(width: 15),
-                      _buildPoshLogoButton(Icons.phone_iphone_rounded, Colors.teal, "SMS"),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                  
-                  // Task 3: Giriş Sayfasına Köprü 🌉
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Zaten bir hesabın var mı?", style: TextStyle(color: Colors.grey)),
-                      TextButton(
-                        onPressed: () {
-                          // GirisSayfasi zaten navigation stack'inde olabilir, 
-                          // ama yoksa direkt oraya yönlendiriyoruz.
-                          Navigator.pop(context); 
-                        },
-                        child: const Text("Giriş Yap", style: TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -300,203 +293,47 @@ class _KayitSayfasiState extends State<KayitSayfasi> {
     );
   }
 
-  // Milyarlık Yeniden Kullanılabilir Checkbox Satırı Fabrikası
-  Widget _checkboxSatiri({
-    required bool deger,
-    required Color renk,
-    required Function(bool?) onDegisti,
-    required VoidCallback? onTap,
-    required String metin,
-    required String link,
-    required Color linkRenk,
-    required bool zorunlu,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: renk.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: renk.withOpacity(0.15)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Checkbox(
-            value: deger,
-            activeColor: renk,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-            onChanged: onDegisti,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (zorunlu)
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(color: renk, borderRadius: BorderRadius.circular(4)),
-                        child: const Text("ZORUNLU", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
-                      )
-                    else
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(4)),
-                        child: const Text("OPSİYONEL", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(metin, style: const TextStyle(fontSize: 12, color: Colors.black54, height: 1.4)),
-                if (link.isNotEmpty && onTap != null) ...[
-                  const SizedBox(height: 3),
-                  GestureDetector(
-                    onTap: onTap,
-                    child: Text(link, style: TextStyle(fontSize: 12, color: linkRenk, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // KVKK Açık Rıza Metnini Alttan Kayan Lüks Panelde Göster
+  // KVKK Açık Rıza Metni (Aynı stil Modal)
   void _acikRizaMetniGoster(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
-              const SizedBox(height: 16),
-              // Başlık
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF009688), Color(0xFF00796B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.privacy_tip_rounded, color: Colors.white, size: 28),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        "KVKK Açık Rıza Metni",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              // İçerik
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.teal.shade200)),
-                        child: const Text(
-                          "6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında, Sorbisende platformu tarafından kişisel verilerimin;",
-                          style: TextStyle(fontSize: 14, height: 1.6, fontWeight: FontWeight.w600, color: Colors.black87),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _rizaMaddesi("Hizmetlerin sunulması"),
-                      _rizaMaddesi("Üyelik işlemlerinin gerçekleştirilmesi"),
-                      _rizaMaddesi("Kullanıcı deneyiminin geliştirilmesi"),
-                      _rizaMaddesi("Güvenlik ve analiz faaliyetlerinin yürütülmesi"),
-                      _rizaMaddesi("Gerekli durumlarda benimle iletişime geçilmesi"),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                        child: const Text(
-                          "amaçlarıyla işlenmesine,\n\nBu verilerin, gerekli durumlarda hizmet alınan üçüncü taraflarla ve yasal yükümlülükler kapsamında yetkili kamu kurumlarıyla paylaşılmasına,\n\nAçık rıza verdiğimi kabul, beyan ve taahhüt ederim.",
-                          style: TextStyle(fontSize: 14, height: 1.7, color: Colors.black87),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(() => _acikRizaKabulEdildi = true);
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text("Okudum, Açık Rıza Veriyorum ✓", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1D),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-      ),
-    );
-  }
-
-  Widget _rizaMaddesi(String metin) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.teal, size: 18),
-          const SizedBox(width: 10),
-          Expanded(child: Text(metin, style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87))),
-        ],
-      ),
-    );
-  }
-
-  // Lüks Giriş Logolarını inşa eden gizli fonksiyon (Google Apple)
-  Widget _buildPoshLogoButton(IconData asilIkon, Color renk, String tul) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [ BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5)) ],
-      ),
-      child: IconButton(
-        icon: Icon(asilIkon, color: renk, size: 35),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        tooltip: tul,
-        onPressed: () {
-          // Firebase Panelinden Ayar Açılınca Devreye Girecek (Şimdilik Uyarı atıyor)
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$tul ile Kayıt Olma Yakında Etkinleştirilecek!")));
-        },
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Icon(Icons.privacy_tip_rounded, color: Colors.cyan, size: 50),
+            const SizedBox(height: 16),
+            const Text("KVKK Açık Rıza", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            const Expanded(
+              child: SingleChildScrollView(
+                child: Text(
+                  "Kişisel verilerinizin işlenmesine yönelik detaylı bilgilendirme... Buraya KVKK metni gelecek. SorBi ekibi verilerinizi sadece size daha iyi bir deneyim sunmak için kullanır.",
+                  style: TextStyle(color: Colors.white70, height: 1.6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() => _acikRizaKabulEdildi = true);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan, foregroundColor: Colors.white),
+                child: const Text("Okudum, Onaylıyorum"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

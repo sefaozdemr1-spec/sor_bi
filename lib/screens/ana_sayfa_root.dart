@@ -25,8 +25,11 @@ class _AnaSayfaRootState extends State<AnaSayfaRoot> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: theme.scaffoldBackgroundColor, // ✅ Dinamik Arka Plan
       body: _sayfalar[_seciliSayfa],
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -38,24 +41,23 @@ class _AnaSayfaRootState extends State<AnaSayfaRoot> {
           );
         },
         backgroundColor: Colors.pinkAccent,
-        elevation: 6,
+        elevation: 10, // Biraz daha derinlik
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 36),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: Theme(
-        data: ThemeData(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05), width: 1)),
         ),
         child: BottomNavigationBar(
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? const Color(0xFF16161D) : Colors.white, // ✅ Mürdüm & Night Uyumlu!
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.deepPurpleAccent.shade700,
-          unselectedItemColor: Colors.grey.shade400,
+          selectedItemColor: Colors.pinkAccent, // ✅ Aktif Pembe!
+          unselectedItemColor: isDark ? Colors.white38 : Colors.grey.shade400,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          elevation: 20,
+          elevation: 0, // Kendi dekorasyonumuz var
           currentIndex: _seciliSayfa,
           onTap: (index) {
             if (index == 2) return;
@@ -64,11 +66,11 @@ class _AnaSayfaRootState extends State<AnaSayfaRoot> {
             });
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_filled, size: 30), label: "Akış"),
-            BottomNavigationBarItem(icon: Icon(Icons.search_rounded, size: 30), label: "Keşfet"),
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled, size: 28), label: "Akış"),
+            BottomNavigationBarItem(icon: Icon(Icons.search_rounded, size: 28), label: "Keşfet"),
             BottomNavigationBarItem(icon: Icon(Icons.add, color: Colors.transparent), label: ""),
-            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_rounded, size: 30), label: "Mesajlar"),
-            BottomNavigationBarItem(icon: Icon(Icons.person_rounded, size: 30), label: "Profilim"),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_rounded, size: 28), label: "Mesajlar"),
+            BottomNavigationBarItem(icon: Icon(Icons.person_rounded, size: 28), label: "Profilim"),
           ],
         ),
       ),
